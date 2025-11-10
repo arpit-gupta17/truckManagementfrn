@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
-import { Link, useParams, useLocation } from 'react-router-dom';
+
+
+
+import React, { useState, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import Navbar from '../../../modules/Navbar';
 import Sidebar from '../../../modules/Sidebar';
-import { useRef } from 'react';
 
 const AddDevice = () => {
-    const { id } = useParams();
-
+  const { id } = useParams();
   const formRef = useRef();
+
   const [deviceData, setDeviceData] = useState({
     serialNumber: '',
     type: '',
@@ -19,15 +21,15 @@ const AddDevice = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setDeviceData(prev => ({
+    setDeviceData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
-  
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("📤 Sending data to backend:", deviceData);
 
     try {
       const response = await fetch('http://localhost:5000/api/device/addDevice', {
@@ -40,14 +42,13 @@ const AddDevice = () => {
       });
 
       const result = await response.json();
-      console.log(result);
+      console.log("📥 Response from backend:", result);
+
       if (!response.ok) throw new Error(result.message || "Failed to add device");
 
-      alert("Device added successfully");
+      alert("✅ Device added successfully!");
 
-      
       formRef.current.reset();
-      
       setDeviceData({
         serialNumber: '',
         type: '',
@@ -58,16 +59,16 @@ const AddDevice = () => {
       });
 
     } catch (err) {
-      console.error("Add device error:", err.message);
+      console.error("❌ Add device error:", err.message);
       alert(`❌ ${err.message}`);
     }
   };
 
-
   return (
     <div className="min-h-screen bg-gray-50">
-        <Navbar/>
-        <Sidebar/>
+      <Navbar />
+      <Sidebar />
+
       {/* Navigation */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex justify-between items-center">
@@ -104,7 +105,7 @@ const AddDevice = () => {
                 type="text"
                 id="serialNumber"
                 name="serialNumber"
-                value={setDeviceData.serialNumber}
+                value={deviceData.serialNumber}
                 onChange={handleInputChange}
                 placeholder="Device Serial Number"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -113,46 +114,46 @@ const AddDevice = () => {
 
             {/* Device Type */}
             <div>
-              <label htmlFor="deviceType" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-2">
                 Device Type
               </label>
               <input
                 type="text"
-                id="deviceType"
-                name="deviceType"
-                value={setDeviceData.deviceType}
+                id="type"
+                name="type"
+                value={deviceData.type}
                 onChange={handleInputChange}
-                placeholder="Device Device Type"
+                placeholder="Device Type"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             {/* Device Mac */}
             <div>
-              <label htmlFor="deviceMac" className="block text-sm font-medium text-gray-700 mb-2">
-                Device Mac
+              <label htmlFor="mac" className="block text-sm font-medium text-gray-700 mb-2">
+                Device MAC
               </label>
               <input
                 type="text"
-                id="deviceMac"
-                name="deviceMac"
-                value={setDeviceData.deviceMac}
+                id="mac"
+                name="mac"
+                value={deviceData.mac}
                 onChange={handleInputChange}
-                placeholder="Device Mac"
+                placeholder="Device MAC Address"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             {/* Device Version */}
             <div>
-              <label htmlFor="deviceVersion" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="version" className="block text-sm font-medium text-gray-700 mb-2">
                 Device Version
               </label>
               <input
                 type="text"
-                id="deviceVersion"
-                name="deviceVersion"
-                value={setDeviceData.deviceVersion}
+                id="version"
+                name="version"
+                value={deviceData.version}
                 onChange={handleInputChange}
                 placeholder="Device Version"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -161,16 +162,17 @@ const AddDevice = () => {
 
             {/* Device Model */}
             <div>
-              <label htmlFor="deviceModel" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="model" className="block text-sm font-medium text-gray-700 mb-2">
                 Device Model
               </label>
               <input
                 type="text"
-                id="deviceModel"
-                name="deviceModel"
-                value={setDeviceData.deviceModel}
+                id="model"
+                name="model"
+                value={deviceData.model}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Device Model"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
@@ -182,9 +184,9 @@ const AddDevice = () => {
               <select
                 id="status"
                 name="status"
-                value={setDeviceData.status}
+                value={deviceData.status}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-400"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
               >
                 <option value="">Select</option>
                 <option value="active">Active</option>

@@ -27,6 +27,7 @@ const Navbar = ({ toggleSidebar }) => {
         <ChevronDown size={12} className="opacity-60" />
       </div>
     </div>
+    
   );
 };
 

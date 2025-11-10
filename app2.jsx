@@ -1,8 +1,11 @@
+// ==========================================
+// FILE: src/App.jsx
+// ==========================================
 
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
-// Import your React pages from EachCompany folder
+// Import your React pages
 import Login from './components/views/login';
 import ManageCompany from './components/views/ManageCompany';
 import AddCompany from './components/views/AddCompany';
@@ -19,10 +22,10 @@ import DriverManagement from './components/views/EachCompany/CompanyManagement/d
 import TerminalDashboard from './components/views/EachCompany/CompanyManagement/terminalManagement/TerminalManagement';
 import AddTerminalForm from './components/views/EachCompany/CompanyManagement/terminalManagement/AddTerminal';
 import ErrorManagement from './components/views/EachCompany/ErrorsManagement';
-//import ELDDashboard from './components/views/EachCompany/LogBook/LogsPage';
+import ELDDashboard from './components/views/EachCompany/LogBook/LogsPage';
 import LogsPage from './components/views/EachCompany/LogBook/DriverManagement';
 import LogPageSummary from './components/views/EachCompany/LogBook/LogBookSummary';
-// Add more as needed
+import DriverLogbook from './components/views/EachCompany/LogBook/DriverLogbook'; // NEW
 
 function App() {
   return (
@@ -32,8 +35,12 @@ function App() {
         <Route path="/ManageCompany" element={<ManageCompany />} />
         <Route path="/AddCompany" element={<AddCompany />} />
         <Route path="/dashboard/:id" element={<Dashboard />} />
+        
+        {/* LogBook Routes */}
         <Route path="/dashboard/:id/LogBook" element={<LogsPage/>} />
-        <Route path="/dashboard/:id/LogBook/LogBookSummary" element={<LogPageSummary/>} />
+        <Route path="/dashboard/:id/LogBook/LogBookSummary/:driverId" element={<LogPageSummary/>} />
+        <Route path="/dashboard/:id/LogBook/DriverLogbook/:driverId" element={<DriverLogbook/>} /> {/* NEW */}
+        
         <Route path="/dashboard/:id/UnidentifiedEvents" element={<UnidentifiedEvents />} />
         <Route path="/dashboard/:id/DOT" element={<DOT />} />
         <Route path="/dashboard/:id/CompanyManagement" element={<CompanyManagement />} />
@@ -46,8 +53,6 @@ function App() {
         <Route path="/dashboard/:id/Manage/TerminalManagement" element={<TerminalDashboard />} />
         <Route path="/dashboard/:id/Manage/TerminalManagement/AddTerminal" element={<AddTerminalForm />} />
         <Route path="/dashboard/:id/ErrorsManagement" element={<ErrorManagement />} />
-        <Route path="/dashboard/:id/LogBook/Summary/:driverId" element={<LogPageSummary />} />
-        <Route path="/dashboard/:id/LogBook/DriverLogbook/:driverId" element={<DriverLogbook />} />
       </Routes>
     </Router>
   );

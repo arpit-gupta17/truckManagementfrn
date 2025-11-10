@@ -5,8 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Navbar from '../../../../modules/Navbar';
-import Sidebar from '../../../../modules/Sidebar';
+import Navbar from '../../../modules/Navbar';
+import Sidebar from '../../../modules/Sidebar';
 
 const API_URL =  'http://localhost:5000/api';
 
