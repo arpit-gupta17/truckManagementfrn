@@ -12,7 +12,7 @@ import Navbar from '../../modules/Navbar';
 import Sidebar from '../../modules/Sidebar';
 import axios from 'axios';
 
-const Drivers = () => {
+const Dashboard = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
@@ -34,6 +34,26 @@ const Drivers = () => {
 
     fetchDrivers();
   }, []);
+
+  // ✅ DVIR Navigation Handler - This redirects to DVIR Management
+  const handleDVIRClick = () => {
+    navigate(`/dashboard/${id}/LogBook/DVIR`);
+  };
+
+  // ✅ Logs Navigation Handler - Redirects to driver's logbook
+  const handleLogsClick = (driverId) => {
+    navigate(`/dashboard/${id}/LogBook/DriverLogBook/${driverId}`);
+  };
+
+  // ✅ Backup Logs Handler - Redirects to driver summary/backup
+  const handleBackupLogsClick = (driverId) => {
+    navigate(`/dashboard/${id}/LogBook/Summary/${driverId}`);
+  };
+
+  // ✅ DOT File Handler - Redirects to DOT management
+  const handleDotFileClick = () => {
+    navigate(`/dashboard/${id}/DOT`);
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
@@ -117,10 +137,37 @@ const Drivers = () => {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-2">
-                          <button className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 text-xs rounded">DVIR</button>
-                          <button className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 text-xs rounded">Logs</button>
-                          <button className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 text-xs rounded">Backup Logs</button>
-                          <button className="bg-gray-300 hover:bg-gray-400 text-black px-2 py-1 text-xs rounded">Dot File</button>
+                          {/* ✅ DVIR Button - Clicking this redirects to DVIR Management */}
+                          <button 
+                            onClick={handleDVIRClick}
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 text-xs rounded transition-colors font-medium"
+                          >
+                            DVIR
+                          </button>
+                          
+                          {/* ✅ Logs Button - Redirects to driver's logbook */}
+                          <button 
+                            onClick={() => handleLogsClick(driver.id)}
+                            className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 text-xs rounded transition-colors font-medium"
+                          >
+                            Logs
+                          </button>
+                          
+                          {/* ✅ Backup Logs Button - Redirects to driver summary */}
+                          <button 
+                            onClick={() => handleBackupLogsClick(driver.id)}
+                            className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 text-xs rounded transition-colors font-medium"
+                          >
+                            Backup Logs
+                          </button>
+                          
+                          {/* ✅ DOT File Button - Redirects to DOT management */}
+                          <button 
+                            onClick={handleDotFileClick}
+                            className="bg-gray-300 hover:bg-gray-400 text-black px-2 py-1 text-xs rounded transition-colors font-medium"
+                          >
+                            Dot File
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -135,4 +182,4 @@ const Drivers = () => {
   );
 };
 
-export default Drivers;
+export default Dashboard;

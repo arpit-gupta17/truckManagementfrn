@@ -152,7 +152,7 @@ const LogsPage = () => {
               </button>
             </div>
             <div style={{ color: 'white', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              👤 Gurdit@xpertlogs.com ▼
+              👤 Gurdit@xpertlo.com ▼
             </div>
           </div>
 
