@@ -1,8 +1,7 @@
 // mobile/src/api/dvirService.js
 
 
-
-import client from './client';
+import axios from 'axios';
 
 /**
  * Submit DVIR report from mobile app

@@ -4,61 +4,85 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './components/views/login';
 import ManageCompany from './components/views/ManageCompany';
 import AddCompany from './components/views/AddCompany';
+
 import Dashboard from './components/views/EachCompany/Dashboard';
 import UnidentifiedEvents from './components/views/EachCompany/UnidentifiedEvents';
 import DOT from './components/views/EachCompany/DotManagement/Dot';
-import AddDriver from './components/views/EachCompany/CompanyManagement/driverManagement/AddDriver';
+
 import CompanyManagement from './components/views/EachCompany/CompanyManagement';
 import DeviceManagement from './components/views/EachCompany/DeviceManagement';
 import AddDevice from './components/views/EachCompany/Devices/AddDevices';
+
 import VehicleManagement from './components/views/EachCompany/CompanyManagement/vehicleManagement/VehicleManagement';
 import VehicleForm from './components/views/EachCompany/CompanyManagement/vehicleManagement/AddVehicle';
+
 import DriverManagement from './components/views/EachCompany/CompanyManagement/driverManagement/DriverManagement';
+import AddDriver from './components/views/EachCompany/CompanyManagement/driverManagement/AddDriver';
+
 import TerminalDashboard from './components/views/EachCompany/CompanyManagement/terminalManagement/TerminalManagement';
 import AddTerminalForm from './components/views/EachCompany/CompanyManagement/terminalManagement/AddTerminal';
+
 import ErrorManagement from './components/views/EachCompany/ErrorsManagement';
+
 import LogsPage from './components/views/EachCompany/LogBook/DriverManagement';
 import LogPageSummary from './components/views/EachCompany/LogBook/LogBookSummary';
+import DriverLogBook from './components/views/EachCompany/LogBook/DriverLogbook';
+
 import DVIRManagement from './components/views/EachCompany/LogBook/DVIRManagement';
-import DriverLogBook from './components/views/EachCompany/LogBook/DriverLogBook';
 
 function App() {
   return (
     <Router>
       <Routes>
+        {/* Auth */}
+        
         <Route path="/" element={<Login />} />
         <Route path="/ManageCompany" element={<ManageCompany />} />
         <Route path="/AddCompany" element={<AddCompany />} />
 
+        {/* Dashboard */}
         <Route path="/dashboard/:id" element={<Dashboard />} />
         <Route path="/dashboard/:id/UnidentifiedEvents" element={<UnidentifiedEvents />} />
         <Route path="/dashboard/:id/DOT" element={<DOT />} />
 
+        {/* Company / Devices */}
         <Route path="/dashboard/:id/CompanyManagement" element={<CompanyManagement />} />
         <Route path="/dashboard/:id/DeviceManagement" element={<DeviceManagement />} />
         <Route path="/dashboard/:id/Devices/AddDevices" element={<AddDevice />} />
 
+        {/* Vehicles */}
         <Route path="/dashboard/:id/Manage/VehicleManagement" element={<VehicleManagement />} />
         <Route path="/dashboard/:id/Manage/VehicleManagement/AddVehicle" element={<VehicleForm />} />
+
+        {/* Drivers */}
         <Route path="/dashboard/:id/Manage/VehicleManagement/DriverManagement" element={<DriverManagement />} />
         <Route path="/dashboard/:id/Manage/VehicleManagement/AddDriver" element={<AddDriver />} />
 
+        {/* Terminals */}
         <Route path="/dashboard/:id/Manage/TerminalManagement" element={<TerminalDashboard />} />
         <Route path="/dashboard/:id/Manage/TerminalManagement/AddTerminal" element={<AddTerminalForm />} />
 
+        {/* Errors */}
         <Route path="/dashboard/:id/ErrorsManagement" element={<ErrorManagement />} />
 
+        {/* LogBook */}
         <Route path="/dashboard/:id/LogBook" element={<LogsPage />} />
         <Route path="/dashboard/:id/LogBook/LogBookSummary" element={<LogPageSummary />} />
         <Route path="/dashboard/:id/LogBook/Summary/:driverId" element={<LogPageSummary />} />
         <Route path="/dashboard/:id/LogBook/DriverLogBook/:driverId" element={<DriverLogBook />} />
-        <Route path="/dashboard/:id/LogBook/DVIR" element={<DVIRManagement />} />
+
+        {/* ✅ DVIR (FIXED, SINGLE ROUTE) */}
+        <Route
+          path="/dashboard/:id/LogBook/DVIR/:driverId"
+          element={<DVIRManagement />}
+        />
       </Routes>
     </Router>
   );
 }
 
 export default App;
+
 
 
 /*
@@ -82,13 +106,9 @@ import DriverManagement from './components/views/EachCompany/CompanyManagement/d
 import TerminalDashboard from './components/views/EachCompany/CompanyManagement/terminalManagement/TerminalManagement';
 import AddTerminalForm from './components/views/EachCompany/CompanyManagement/terminalManagement/AddTerminal';
 import ErrorManagement from './components/views/EachCompany/ErrorsManagement';
-//import ELDDashboard from './components/views/EachCompany/LogBook/LogsPage';
-import LogsPage from './components/views/EachCompany/LogBook/DriverManagement';
+
+import DriverLogbook from './components/views/EachCompany/LogBook/DriverLogbook';
 import LogPageSummary from './components/views/EachCompany/LogBook/LogBookSummary';
-import DVIRManagement from './components/views/EachCompany/LogBook/DVIRManagement';
-import DriverLogBook from './components/views/EachCompany/LogBook/DriverLogBook';
-
-
 // Add more as needed
 
 function App() {

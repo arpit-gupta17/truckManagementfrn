@@ -65,4 +65,6 @@ function buildHourlyFallbackFromEvents(events = []) {
     }
   }
   return rows;
+
 }
+

@@ -129,4 +129,6 @@ function deriveHourlyFromEvents(events = [], dateStr) {
     }
   }
   return result;
+
 }
+

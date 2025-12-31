@@ -1,3 +1,507 @@
+// backend/controllers/dvirController.js
+import pool from '../db/index.js';
+
+/**
+ * ✅ ADD DVIR - Mobile App Submits DVIR
+ */
+export async function addDVIR(req, res) {
+  try {
+    const { company_id, username } = req.user; // From JWT token
+    console.log("📱 MOBILE REQ.USER:", req.user);
+
+
+    const {
+      time,
+      odometer,
+      engineHours,
+      location,
+      remarks,
+      status,
+      vehicle_number,
+      vehicleDefects,
+      trailer_number,
+      trailerDefects,
+      signature,
+    } = req.body;
+
+    // Validation
+    if (!time || !vehicle_number ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: time, vehicle, status, signature'
+      });
+    }
+
+    // Insert into database
+    const query = `
+      INSERT INTO dvirs (
+        driver_username,
+        company_id,
+        time,
+        odometer,
+        engine_hours,
+        location,
+        remarks,
+        status,
+        vehicle_number,
+        vehicle_defect,
+        trailer_number,
+        trailer_defect,
+        signature,
+        certified,
+        created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
+      RETURNING *
+    `;
+
+    const values = [
+      username,
+      company_id,
+      time,
+      odometer || null,
+      engineHours || null,
+      location || null,
+      remarks || null,
+      status,
+      vehicle_number,
+      JSON.stringify(vehicleDefects || []),
+      trailer_number || null,
+      JSON.stringify(trailerDefects || []),
+      signature,
+      false // Not certified yet
+    ];
+
+    const result = await pool.query(query, values);
+
+    res.status(201).json({
+      success: true,
+      message: 'DVIR submitted successfully',
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('❌ Add DVIR Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to submit DVIR',
+      error: error.message
+    });
+  }
+}
+
+/**
+ * ✅ GET DRIVER DVIRs - For Mobile App (Driver's own DVIRs)
+ */
+export async function getDriverDVIRs(req, res) {
+  try {
+    const { username } = req.user;
+    const limit = parseInt(req.query.limit) || 50;
+
+    const query = `
+      SELECT 
+        id,
+        driver_username,
+        company_id,
+        time,
+        odometer,
+        engine_hours,
+        location,
+        remarks,
+        status,
+        vehicle_number,
+        vehicle_defect,
+        trailer_number,
+        trailer_defect,
+        signature,
+        certified,
+        created_at
+      FROM dvirs
+      WHERE driver_username = $1
+      ORDER BY created_at DESC
+      LIMIT $2
+    `;
+
+    const result = await pool.query(query, [username, limit]);
+
+    res.json({
+      success: true,
+      data: result.rows.map(row => ({
+        ...row,
+        vehicleDefects: JSON.parse(row.vehicle_defect || '[]'),
+        trailerDefects: JSON.parse(row.trailer_defect || '[]')
+      }))
+    });
+
+  } catch (error) {
+    console.error('❌ Get Driver DVIRs Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch DVIRs',
+      error: error.message
+    });
+  }
+}
+
+/**
+ * ✅ GET DVIRs - For Web Dashboard (Company's all DVIRs)
+ */
+export async function getDVIRs(req, res) {
+  try {
+    const { company_id } = req.user;
+    const { startDate, endDate, filter, search } = req.query;
+
+    let query = `
+      SELECT 
+        d.id,
+        d.driver_username,
+        d.company_id,
+        d.time,
+        d.odometer,
+        d.engine_hours,
+        d.location,
+        d.remarks,
+        d.status,
+        d.vehicle_number,
+        d.vehicle_defect,
+        d.trailer_number,
+        d.trailer_defect,
+        d.signature,
+        d.certified,
+        d.created_at,
+        dr.first_name,
+        dr.last_name,
+        c.companyname
+      FROM dvirs d
+      LEFT JOIN drivers dr ON d.driver_username = dr.username
+      LEFT JOIN companies c ON d.company_id = c.id
+      WHERE d.company_id = $1
+    `;
+
+    const params = [company_id];
+    let paramIndex = 2;
+
+// Date filtering (FIXED to include full end date)
+if (startDate && endDate) {
+  query += `
+    AND d.time >= $${paramIndex}
+    AND d.time < ($${paramIndex + 1}::date + INTERVAL '1 day')
+  `;
+  params.push(startDate, endDate);
+  paramIndex += 2;
+}
+
+    /*
+    // Date filtering
+    if (startDate && endDate) {
+      query += ` AND d.time >= $${paramIndex} AND d.time <= $${paramIndex + 1}`;
+      params.push(startDate, endDate);
+      paramIndex += 2;
+    }
+*/
+    // Search filtering
+    if (search && filter) {
+      if (filter === 'vehicle_number') {
+        query += ` AND d.vehicle_number ILIKE $${paramIndex}`;
+        params.push(`%${search}%`);
+        paramIndex++;
+      } else if (filter === 'driver') {
+        query += ` AND d.driver_username ILIKE $${paramIndex}`;
+        params.push(`%${search}%`);
+        paramIndex++;
+      } else if (filter === 'status') {
+        query += ` AND d.status ILIKE $${paramIndex}`;
+        params.push(`%${search}%`);
+        paramIndex++;
+      }
+    }
+
+    // General search (if no specific filter)
+    if (search && !filter) {
+      query += ` AND (
+        d.vehicle_number ILIKE $${paramIndex} OR
+        d.driver_username ILIKE $${paramIndex} OR
+        d.location ILIKE $${paramIndex} OR
+        d.status ILIKE $${paramIndex}
+      )`;
+      params.push(`%${search}%`);
+    }
+
+    query += ` ORDER BY d.created_at DESC LIMIT 100`;
+
+    const result = await pool.query(query, params);
+
+    res.json({
+      success: true,
+      data: result.rows.map(row => ({
+        _id: row.id,
+        time: row.time,
+        odometer: row.odometer,
+        engineHours: row.engine_hours,
+        location: row.location,
+        company: row.companyname,
+        remarks: row.remarks,
+        status: row.status,
+        vehicleNumber: row.vehicle_number,
+        vehicleDefects: safeParseDefects(row.vehicle_defect),
+        trailerNumber: row.trailer_number,
+        trailerDefects: safeParseDefects(row.trailer_defect),
+        signature: row.signature,
+        driverName: `${row.first_name || ''} ${row.last_name || ''}`.trim() || row.driver_username,
+        driverId: row.driver_username,
+        certified: row.certified,
+        createdAt: row.created_at
+      }))
+    });
+
+  } catch (error) {
+    console.error('❌ Get DVIRs Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch DVIRs',
+      error: error.message
+    });
+  }
+}
+
+/**
+ * ✅ DELETE SINGLE DVIR
+ */
+export async function deleteDVIR(req, res) {
+  try {
+    const { id } = req.params;
+    const { company_id } = req.user;
+
+    const result = await pool.query(
+      `DELETE FROM dvirs WHERE id = $1 AND company_id = $2 RETURNING *`,
+      [id, company_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'DVIR not found or access denied'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'DVIR deleted successfully',
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('❌ Delete DVIR Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete DVIR',
+      error: error.message
+    });
+  }
+}
+
+/**
+ * ✅ DELETE MULTIPLE DVIRs
+ */
+export async function deleteMultipleDVIRs(req, res) {
+  try {
+    const { ids } = req.body;
+    const { company_id } = req.user;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or empty IDs array'
+      });
+    }
+
+    const placeholders = ids.map((_, index) => `$${index + 2}`).join(',');
+    const query = `DELETE FROM dvirs WHERE company_id = $1 AND id IN (${placeholders}) RETURNING *`;
+    
+    const result = await pool.query(query, [company_id, ...ids]);
+
+    res.json({
+      success: true,
+      message: `${result.rows.length} DVIR(s) deleted successfully`,
+      deletedCount: result.rows.length
+    });
+
+  } catch (error) {
+    console.error('❌ Delete Multiple DVIRs Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete DVIRs',
+      error: error.message
+    });
+  }
+}
+
+/**
+ * ✅ UPDATE DVIR
+ */
+export async function updateDVIRController(req, res) {
+  try {
+    const { id } = req.params;
+    const { username, company_id } = req.user;
+    const updates = req.body;
+
+    // Check ownership
+    const checkQuery = `
+      SELECT * FROM dvirs 
+      WHERE id = $1 AND (driver_username = $2 OR company_id = $3)
+    `;
+    const check = await pool.query(checkQuery, [id, username, company_id]);
+
+    if (check.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'DVIR not found or access denied'
+      });
+    }
+
+    // Build update query dynamically
+    const allowedFields = [
+      'odometer', 'engine_hours', 'location', 'remarks', 
+      'status', 'vehicle_number', 'vehicle_defect', 'trailer_number', 
+      'trailer_defect', 'certified'
+    ];
+
+    const setClauses = [];
+    const values = [];
+    let paramIndex = 1;
+
+    Object.keys(updates).forEach(key => {
+      const dbKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      if (allowedFields.includes(dbKey)) {
+        setClauses.push(`${dbKey} = $${paramIndex}`);
+        values.push(updates[key]);
+        paramIndex++;
+      }
+    });
+
+    if (setClauses.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No valid fields to update'
+      });
+    }
+
+    values.push(id);
+    const updateQuery = `
+      UPDATE dvirs 
+      SET ${setClauses.join(', ')}, updated_at = NOW()
+      WHERE id = $${paramIndex}
+      RETURNING *
+    `;
+
+    const result = await pool.query(updateQuery, values);
+
+    res.json({
+      success: true,
+      message: 'DVIR updated successfully',
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('❌ Update DVIR Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update DVIR',
+      error: error.message
+    });
+  }
+}
+export async function certifyDVIRReport(req, res) {
+  try {
+    const { id } = req.params;
+    const { company_id } = req.user;
+
+    const result = await pool.query(
+      `UPDATE dvirs
+       SET certified = true, updated_at = NOW()
+       WHERE id = $1 AND company_id = $2
+       RETURNING *`,
+      [id, company_id]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ message: "DVIR not found" });
+    }
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+}
+
+function safeParseDefects(value) {
+  if (!value) return [];
+
+  // Already an array
+  if (Array.isArray(value)) return value;
+
+  // Plain string like "Tire Failure"
+  if (typeof value === 'string' && !value.trim().startsWith('[')) {
+    return [value];
+  }
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * ✅ GET DVIR STATS
+ */
+export async function getDVIRStats(req, res) {
+  try {
+    const { company_id } = req.user;
+    const { startDate, endDate } = req.query;
+
+    let query = `
+      SELECT
+        COUNT(*)::int AS total_reports,
+        COUNT(*) FILTER (WHERE status = 'Vehicle Condition Satisfactory')::int AS satisfactory,
+        COUNT(*) FILTER (WHERE status != 'Vehicle Condition Satisfactory')::int AS unsatisfactory,
+        COUNT(*) FILTER (WHERE 
+          vehicle_defect IS NOT NULL 
+          AND vehicle_defect != '[]' 
+          AND vehicle_defect != 'null'
+          OR trailer_defect IS NOT NULL 
+          AND trailer_defect != '[]'
+          AND trailer_defect != 'null'
+        )::int AS defects_found,
+        COUNT(*) FILTER (WHERE certified = true)::int AS certified_reports,
+        COUNT(*) FILTER (WHERE certified = false)::int AS pending_certification
+      FROM dvirs
+      WHERE company_id = $1
+    `;
+
+    const params = [company_id];
+
+    if (startDate && endDate) {
+      query += ` AND time >= $2 AND time <= $3`;
+      params.push(startDate, endDate);
+    }
+
+    const result = await pool.query(query, params);
+
+    res.json({
+      success: true,
+      stats: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('❌ Get DVIR Stats Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch statistics',
+      error: error.message
+    });
+  }
+}
+
 import React, { useState, useEffect } from 'react';
 import { Calendar, ChevronDown, Search, Download, FileText, Printer, Eye, Trash2, Edit } from 'lucide-react';
 import Navbar from '../../../modules/Navbar';
@@ -19,24 +523,6 @@ export default function DVIRSystem() {
   const [editingRow, setEditingRow] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editFormData, setEditFormData] = useState({});
-  const [signatureFile, setSignatureFile] = useState(null);
-const [signaturePreview, setSignaturePreview] = useState(null);
-const [visibleColumns, setVisibleColumns] = useState({
-  vehicleNumber: true,
-  trailerNumber: true,
-  time: true,
-  vDefects: true,
-  tDefects: true,
-  odometer: true,
-  engineHours: true,
-  driver: true,
-  location: true,
-  remarks: true,
-  signature: true,
-  status: true,
-  action: true,
-});
-
 
   // Initialize dates to today
   useEffect(() => {
@@ -109,14 +595,6 @@ const [visibleColumns, setVisibleColumns] = useState({
     setLoading(false);
   };
 
-  const toggleColumn = (column) => {
-  setVisibleColumns(prev => ({
-    ...prev,
-    [column]: !prev[column],
-  }));
-};
-
-
   const handleSubmit = () => {
     setCurrentPage(1);
     fetchDVIRData();
@@ -166,8 +644,7 @@ const [visibleColumns, setVisibleColumns] = useState({
         setSelectedRows([]);
         fetchDVIRData();*/
         if (result.success) {
- alert(`${result.deletedCount} DVIR(s) deleted successfully`);
-
+  alert('DVIRs deleted successfully');
 
   setSelectedRows([]);
   setSearchTerm('');
@@ -263,24 +740,6 @@ const [visibleColumns, setVisibleColumns] = useState({
       [type]: prev[type].filter((_, i) => i !== index)
     }));
   };
-  
-const handleSignature = (file) => {
-  if (!file) return;
-
-  setSignatureFile(file);
-
-  // Image preview (PNG, JPG, etc.)
-  if (file.type.startsWith('image/')) {
-    const reader = new FileReader();
-    reader.onload = () => setSignaturePreview(reader.result);
-    reader.readAsDataURL(file);
-  } 
-  // PDF or other files → no preview
-  else {
-    setSignaturePreview(null);
-  }
-};
-
 
   const handleSaveEdit = async () => {
     try {
@@ -335,26 +794,11 @@ const handleSignature = (file) => {
     }
   };
 
-  const filteredData = dvirData.filter((item) => {
-  if (!searchTerm) return true;
-
-  const term = searchTerm.toLowerCase();
-
-  return (
-    item.vehicleNumber?.toLowerCase().includes(term) ||
-    item.driver?.toLowerCase().includes(term)
-  );
-});
-
-
   // Pagination
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  //const currentItems = dvirData.slice(indexOfFirstItem, indexOfLastItem);
-  //const totalPages = Math.ceil(dvirData.length / itemsPerPage);
-
-  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
-const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const currentItems = dvirData.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(dvirData.length / itemsPerPage);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
@@ -483,7 +927,6 @@ const totalPages = Math.ceil(filteredData.length / itemsPerPage);
                   >
                     Print
                   </button>
-                  
                   {selectedRows.length > 0 && (
                     <button
                       onClick={handleDeleteSelected}
@@ -492,8 +935,6 @@ const totalPages = Math.ceil(filteredData.length / itemsPerPage);
                       <Trash2 className="w-4 h-4" />
                       Delete Selected ({selectedRows.length})
                     </button>
-                    
-                    
                   )}
                 </div>
 
@@ -501,13 +942,9 @@ const totalPages = Math.ceil(filteredData.length / itemsPerPage);
                   <span className="text-sm text-gray-600">Search:</span>
                   <div className="relative">
                     <input
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => {
-                          setSearchTerm(e.target.value);
-                          setCurrentPage(1);
-                        }}
-
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
                       className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
                       placeholder=""
                     />
@@ -531,24 +968,21 @@ const totalPages = Math.ceil(filteredData.length / itemsPerPage);
                           <span>Vehicle Number</span>
                         </div>
                       </th>
-                      {visibleColumns.trailerNumber && (<th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Trailer Number</th>)}
-                      {visibleColumns.trailerNumber && (<th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Time</th>)}
-                      {visibleColumns.trailerNumber && (<th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">V Defects</th>)}
-                      {visibleColumns.trailerNumber && (<th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">T Defects</th>)}
-                      {visibleColumns.trailerNumber && (<th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Odometer</th>)}
-                      {visibleColumns.trailerNumber && (<th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Engine Hours</th>)}
-                      {visibleColumns.trailerNumber && (<th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Driver</th>)}
-                      {visibleColumns.trailerNumber && (<th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Location</th>)}
-                      {visibleColumns.trailerNumber && (<th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Remarks</th>)}
-                      {visibleColumns.trailerNumber && (<th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Signature</th>)}
-                      {visibleColumns.trailerNumber && (<th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>)}
-                      {visibleColumns.trailerNumber && (<th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Action</th>)}
-                      {visibleColumns.trailerNumber && (<th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Action</th>)}
-                      {visibleColumns.trailerNumber && (<th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Action</th>)}
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Trailer Number</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Time</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">V Defects</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">T Defects</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Odometer</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Engine Hours</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Driver</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Location</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Remarks</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Signature</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Action</th>
                     </tr>
                   </thead>
                   <tbody>
-
                     {loading ? (
                       <tr>
                         <td colSpan="14" className="px-4 py-12 text-center text-gray-500">
@@ -662,7 +1096,7 @@ const totalPages = Math.ceil(filteredData.length / itemsPerPage);
               {/* Pagination */}
               <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
                 <div>
-                 Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredData.length)} of {filteredData.length} entries
+                  Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, dvirData.length)} of {dvirData.length} entries
                 </div>
                 <div className="flex gap-1">
                   <button
@@ -819,44 +1253,6 @@ const totalPages = Math.ceil(filteredData.length / itemsPerPage);
                     />
                   </div>
 
-                     {/* Signature Upload */}
-<div>
-  <label className="block text-sm font-medium text-gray-700 mb-2">
-    Driver Signature
-  </label>
-
-  <div
-    onDragOver={(e) => e.preventDefault()}
-    onDrop={(e) => {
-      e.preventDefault();
-      handleSignature(e.dataTransfer.files[0]);
-    }}
-    onClick={() => document.getElementById('signatureUpload').click()}
-    className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-500"
-  >
-    {signaturePreview ? (
-      <img src={signaturePreview} alt="Signature" className="max-h-32 mx-auto" />
-    ) : signatureFile ? (
-      <p className="text-sm text-gray-700">{signatureFile.name}</p>
-    ) : (
-      <p className="text-gray-500 text-sm">
-        Drag & drop signature here or click to upload
-        <br />
-        <span className="text-xs">(PNG, JPG, PDF, any file)</span>
-      </p>
-    )}
-  </div>
-
-  <input
-    id="signatureUpload"
-    type="file"
-    className="hidden"
-    accept="*"
-    onChange={(e) => handleSignature(e.target.files[0])}
-  />
-</div>
-
-
                   {/* Vehicle Defects */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Vehicle Defects</label>
@@ -937,7 +1333,6 @@ const totalPages = Math.ceil(filteredData.length / itemsPerPage);
                     </div>
                   </div>
                 </div>
-                
 
                 <div className="sticky bottom-0 bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
                   <button
@@ -961,3 +1356,75 @@ const totalPages = Math.ceil(filteredData.length / itemsPerPage);
     </div>
   );
 }
+
+
+
+
+//////////////////////////////////////////////////////////////
+
+  /*
+  // Initialize dates to today
+  useEffect(() => {
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
+    setStartDate(dateStr);
+    setEndDate(dateStr);
+  }, []);
+
+  // Auto-fetch when component mounts
+  useEffect(() => {
+    if (id) {
+      setSelectedCompanyId(id);
+      fetchDVIRData();
+    }
+  }, [id]);
+  
+
+  useEffect(() => {
+  const onFocus = () => fetchDVIRData();
+  window.addEventListener("focus", onFocus);
+  return () => window.removeEventListener("focus", onFocus);
+}, [startDate, endDate, selectedFilter, searchTerm]);
+
+*/
+
+// 1️⃣ initialize dates
+useEffect(() => {
+  const today = new Date();
+  const dateStr = today.toISOString().split('T')[0];
+  setStartDate(dateStr);
+  setEndDate(dateStr);
+}, []);
+
+// 2️⃣ fetch when company + dates are ready ✅
+useEffect(() => {
+  if (!id) return;
+  if (!startDate || !endDate) return;
+
+  setSelectedCompanyId(id);
+  fetchDVIRData();
+}, [id, startDate, endDate]);
+
+// 3️⃣ refresh on window focus ✅
+useEffect(() => {
+  const onFocus = () => {
+    if (!startDate || !endDate) return;
+    fetchDVIRData();
+  };
+
+  window.addEventListener("focus", onFocus);
+  return () => window.removeEventListener("focus", onFocus);
+}, [startDate, endDate, selectedFilter, searchTerm]);
+
+
+/*
+useEffect(() => {
+  const onFocus = () => {
+    if (!startDate || !endDate) return;
+    fetchDVIRData();
+  };
+
+  window.addEventListener("focus", onFocus);
+  return () => window.removeEventListener("focus", onFocus);
+}, [startDate, endDate, selectedFilter, searchTerm]);
+*/

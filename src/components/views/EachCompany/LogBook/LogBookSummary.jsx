@@ -247,3 +247,4 @@ const LogBookSummary = () => {
 };
 
 export default LogBookSummary;
+

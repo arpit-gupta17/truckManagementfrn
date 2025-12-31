@@ -14,6 +14,9 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+
+
+    
     try {
       const response = await axios.post(
         'http://localhost:5000/api/user/login',
@@ -38,6 +41,26 @@ const Login = () => {
       alert('Invalid credentials');
     }
   };
+
+/*
+  try {
+      const response = await axios.post(
+        'http://localhost:5000/api/user/login',
+        { username, password },
+        { withCredentials: true } // ✅ REQUIRED
+      );
+
+      console.log('LOGIN RESPONSE:', response.data);
+
+      // ✅ Web auth uses cookies — no token handling here
+      navigate('/ManageCompany');
+
+    } catch (error) {
+      console.error('LOGIN ERROR:', error);
+      alert('Invalid credentials');
+    }
+  };
+*/
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-blue-100 p-4">

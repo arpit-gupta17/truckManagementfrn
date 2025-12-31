@@ -64,12 +64,19 @@ const LogsPage = () => {
       console.error('Error searching drivers:', error);
     }
   };
+  
 
   const handleDriverClick = (driverId, driverName) => {
     navigate(`/dashboard/${id}/LogBook/LogPageSummary/${driverId}`, {
       state: { driverName }
     });
   };
+
+
+  const handleDVIRClick = (e, driverId) => {
+  e.stopPropagation();
+  navigate(`/dashboard/${id}/LogBook/DVIR/${driverId}`);
+};
 
   const exportToCSV = () => {
     const headers = ['Name', 'Company', 'Role', 'Cycle', 'Assigned Unit', 'Status'];
@@ -438,21 +445,21 @@ const LogsPage = () => {
                                   fontWeight: 600,
                                   cursor: 'pointer'
                                 }}
-                              >
-                                DVIR
-                              </button>
-                              <button 
-                                style={{ 
-                                  padding: '7px 14px', 
-                                  backgroundColor: '#ffc107', 
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '3px',
-                                  fontSize: '12px',
-                                  fontWeight: 600,
-                                  cursor: 'pointer'
-                                }}
-                              >
+                                                              >
+                                    <button
+                                  onClick={(e) => handleDVIRClick(e, driver.id)}
+                                  style={{ 
+                                    padding: '7px 14px', 
+                                    backgroundColor: '#00bcd4', 
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '3px',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer'
+                                  }}
+                                >DVIR  </button>
+
                                 Logs
                               </button>
                               <button 

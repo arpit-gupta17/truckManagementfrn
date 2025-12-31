@@ -23,7 +23,7 @@ const Navbar = ({ toggleSidebar }) => {
       </div>
 
       <div className="ml-auto flex items-center cursor-pointer border border-gray-300 px-3 py-1.5 rounded hover:bg-gray-50">
-        <span className="mr-2 text-sm font-medium">jobanpreet@xpertlogs</span>
+        <span className="mr-2 text-sm font-medium"></span>
         <ChevronDown size={12} className="opacity-60" />
       </div>
     </div>

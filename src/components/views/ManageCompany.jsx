@@ -221,4 +221,4 @@ const ManageCompany = () => {
   );
 };
 
-export default ManageCompany; 
+export default ManageCompany;
